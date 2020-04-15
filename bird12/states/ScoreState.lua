@@ -16,11 +16,12 @@ ScoreState = Class{__includes = BaseState}
 ]]
 function ScoreState:enter(params)
     self.score = params.score
+    self.achievement = params.achievement
 end
 
 function ScoreState:update(dt)
     -- go back to play if enter is pressed
-    if love.keyboard.wasPressed('enter') or love.keyboard.wasPressed('return') then
+    if love.keyboard.wasPressed('enter') or love.keyboard.wasPressed('return') or love.mouse.wasPressed(1) then
         gStateMachine:change('countdown')
     end
 end
@@ -33,5 +34,8 @@ function ScoreState:render()
     love.graphics.setFont(mediumFont)
     love.graphics.printf('Score: ' .. tostring(self.score), 0, 100, VIRTUAL_WIDTH, 'center')
 
-    love.graphics.printf('Press Enter to Play Again!', 0, 160, VIRTUAL_WIDTH, 'center')
+    self.medals = Medals()
+    self.medals:renderFinal(self.achievement)
+
+    love.graphics.printf('Press Enter or Left-Click to Play Again!', 0, 160, VIRTUAL_WIDTH, 'center')
 end

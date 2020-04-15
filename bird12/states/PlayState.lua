@@ -17,17 +17,45 @@ PIPE_HEIGHT = 288
 BIRD_WIDTH = 38
 BIRD_HEIGHT = 24
 
+-- to enable the pause 
+pause = false
+
 function PlayState:init()
     self.bird = Bird()
     self.pipePairs = {}
     self.timer = 0
     self.score = 0
+    self.medals = Medals()
+    self.medals.achievement = 'none'
 
     -- initialize our last recorded Y value for a gap placement to base other gaps off of
     self.lastY = -PIPE_HEIGHT + math.random(80) + 20
 end
 
 function PlayState:update(dt)
+
+    --[[
+        There's probably a very elegant way to transition from play to pause state and this
+        is what I tried in the beginning.  Truth is I couldn't get the transition to work
+        and this seemed to be much easier than implementing a whole new state.
+    ]]
+
+    -- check for pause - must be done before our pause loop
+    if love.keyboard.wasPressed('p') then
+        pause = not pause and true or false
+        if pause then sounds['pause']:play() end
+    end
+
+    -- this is where our pause loop ends if we are paused
+    if pause then
+        scrolling = false
+        sounds['music']:pause()
+        return -- don't do anything else
+    else
+        scrolling = true
+        sounds['music']:play()
+    end
+
     -- update timer for pipe spawning
     self.timer = self.timer + dt
 
@@ -43,8 +71,9 @@ function PlayState:update(dt)
         -- add a new pipe pair at the end of the screen at our new Y
         table.insert(self.pipePairs, PipePair(y))
 
-        -- reset timer
-        self.timer = 0
+        -- reset timer with a random 0-2 seconds more than 2 seconds
+        local randomInterval = love.math.random(-2,0) -- this seemed easiest
+        self.timer = 0 + randomInterval
     end
 
     -- for every pair of pipes..
@@ -80,12 +109,16 @@ function PlayState:update(dt)
                 sounds['explosion']:play()
                 sounds['hurt']:play()
 
-                gStateMachine:change('score', {
-                    score = self.score
+                gStateMachine:change('score', { 
+                    score = self.score, 
+                    achievement = self.medals.achievement
                 })
             end
         end
     end
+
+    -- update medals if any are in motion
+    self.medals:update(dt)
 
     -- update bird based on gravity and input
     self.bird:update(dt)
@@ -96,8 +129,35 @@ function PlayState:update(dt)
         sounds['hurt']:play()
 
         gStateMachine:change('score', {
-            score = self.score
+            score = self.score,
+            achievement = self.medals.achievement,
         })
+    end
+
+    -- check to see if you've won a (new) medal
+    self.medals:checkIfWon(self.score)
+
+--[[
+        gStateMachine:change('pause', {
+            bird = self.bird,
+            pipes = self.pipePairs[],
+            score = self.score,
+            timer = self.timer,
+            medals = self.medals,
+            achievement = self.medals.achievement,
+        }
+    )
+    end]]
+    
+    -- Just turn music on/off with 'm' key
+    if love.keyboard.wasPressed('m') then
+        if musicOn then 
+            sounds['music']:pause() 
+            musicOn = false
+        else
+            sounds['music']:play()
+            musicOn = true
+        end
     end
 end
 
@@ -109,15 +169,40 @@ function PlayState:render()
     love.graphics.setFont(flappyFont)
     love.graphics.print('Score: ' .. tostring(self.score), 8, 8)
 
+    -- debug any music issues
+    if musicOn then
+        musicState = 'On'
+    else
+        musicState = 'Off'
+    end
+    if DEBUG == true then 
+        love.graphics.print('Music: ' .. tostring(musicState), 8, 40)
+    end
+    -- end debug
+
+    if pause then
+        love.graphics.setFont(hugeFont)
+        love.graphics.printf('Paused', 0, 100, VIRTUAL_WIDTH, 'center')
+    end
+
+    self.medals:render()
     self.bird:render()
 end
 
 --[[
     Called when this state is transitioned to from another state.
 ]]
-function PlayState:enter()
+function PlayState:enter(params)
     -- if we're coming from death, restart scrolling
     scrolling = true
+    --[[if params then
+        self.bird = params.bird
+        self.pipePairs = params.pipePairs
+        self.timer = params.timer
+        self.score = params.score
+        self.medals = params.medals
+        self.medals.achievement = params.medals.achievement
+    end]]
 end
 
 --[[

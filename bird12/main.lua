@@ -44,6 +44,7 @@ require 'states/TitleScreenState'
 require 'Bird'
 require 'Pipe'
 require 'PipePair'
+require 'Medals'
 
 -- physical screen dimensions
 WINDOW_WIDTH = 1280
@@ -53,10 +54,10 @@ WINDOW_HEIGHT = 720
 VIRTUAL_WIDTH = 512
 VIRTUAL_HEIGHT = 288
 
-local background = love.graphics.newImage('background.png')
+local background = love.graphics.newImage('assets/background.png')
 local backgroundScroll = 0
 
-local ground = love.graphics.newImage('ground.png')
+local ground = love.graphics.newImage('assets/ground.png')
 local groundScroll = 0
 
 local BACKGROUND_SCROLL_SPEED = 30
@@ -64,8 +65,14 @@ local GROUND_SCROLL_SPEED = 60
 
 local BACKGROUND_LOOPING_POINT = 413
 
+-- debug
+DEBUG = false
+
 -- global variable we can use to scroll the map
 scrolling = true
+
+-- global variable to turn music on/off
+musicOn   = true
 
 function love.load()
     -- initialize our nearest-neighbor filter
@@ -78,26 +85,37 @@ function love.load()
     love.window.setTitle('Fifty Bird')
 
     -- initialize our nice-looking retro text fonts
-    smallFont = love.graphics.newFont('font.ttf', 8)
-    mediumFont = love.graphics.newFont('flappy.ttf', 14)
-    flappyFont = love.graphics.newFont('flappy.ttf', 28)
-    hugeFont = love.graphics.newFont('flappy.ttf', 56)
+    smallFont = love.graphics.newFont('assets/font.ttf', 8)
+    mediumFont = love.graphics.newFont('assets/flappy.ttf', 14)
+    flappyFont = love.graphics.newFont('assets/flappy.ttf', 28)
+    hugeFont = love.graphics.newFont('assets/flappy.ttf', 56)
     love.graphics.setFont(flappyFont)
 
     -- initialize our table of sounds
     sounds = {
-        ['jump'] = love.audio.newSource('jump.wav', 'static'),
-        ['explosion'] = love.audio.newSource('explosion.wav', 'static'),
-        ['hurt'] = love.audio.newSource('hurt.wav', 'static'),
-        ['score'] = love.audio.newSource('score.wav', 'static'),
+        ['jump'] = love.audio.newSource('sounds/jump.wav', 'static'),
+        ['explosion'] = love.audio.newSource('sounds/explosion.wav', 'static'),
+        ['hurt'] = love.audio.newSource('sounds/hurt.wav', 'static'),
+        ['score'] = love.audio.newSource('sounds/score.wav', 'static'),
+        ['medal'] = love.audio.newSource('sounds/medal.wav', 'static'),
+        ['pause'] = love.audio.newSource('sounds/pause.wav', 'static'),
+
+        -- https://freesound.org/people/Benboncan/sounds/103630/
+        ['clank'] = love.audio.newSource('sounds/clank.mp3', 'static'),
+
+        -- https://freesound.org/people/qubodup/sounds/60009/
+        ['whoosh'] = love.audio.newSource('sounds/whoosh.mp3', 'static'),
 
         -- https://freesound.org/people/xsgianni/sounds/388079/
-        ['music'] = love.audio.newSource('marios_way.mp3', 'static')
+        ['music'] = love.audio.newSource('sounds/marios_way.mp3', 'static'),
+
     }
 
     -- kick off music
     sounds['music']:setLooping(true)
-    sounds['music']:play()
+    if musicOn then
+        sounds['music']:play()
+    end
 
     -- initialize our virtual resolution
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
